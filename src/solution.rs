@@ -18,6 +18,25 @@ pub(crate) trait Solution {
 
         Ok(lines)
     }
+
+    fn read_input_into_grid(path: &str) -> Result<Vec<Vec<char>>> {
+        let file = File::open(path)?;
+        let mut reader = BufReader::new(file);
+        let mut grid = Vec::new();
+
+        let mut buf = String::new();
+        while let Ok(n) = reader.read_line(&mut buf) {
+            if n == 0 {
+                break;
+            }
+
+            grid.push(buf.trim().chars().collect());
+            buf.clear();
+        }
+
+        Ok(grid)
+    }
+
     fn problem1(path: &str) -> Result<()>;
     fn problem2(path: &str) -> Result<()>;
 }
