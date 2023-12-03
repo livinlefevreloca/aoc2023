@@ -97,19 +97,12 @@ impl Solution for Day3 {
 
     fn problem2(path: &str) -> Result<()> {
         let grid = Day3::read_input_into_grid(path)?;
-
-        let mut total: u32 = 0;
-        for (i, line) in grid.iter().enumerate() {
-            for (j, c) in line.iter().enumerate() {
-                if *c == '*' {
-                    if let Some(ratio) = Day3::extract_gear_ratio(i, j, &grid) {
-                        total += ratio;
-                    }
-                } else {
-                    continue;
-                }
-            }
-        }
+        let total = grid.iter().enumerate().map(|(i, line)| {
+            line.iter()
+                .enumerate()
+                .filter(|(_, c)| **c == '*')
+                .map(|(j, _)| Day3::extract_gear_ratio(i, j, &grid)).map(|o| o.unwrap_or(0)).sum::<u32>()
+        }).sum::<u32>();
 
         println!("Got solution to Day3 Problem2: {}", total);
         Ok(())
