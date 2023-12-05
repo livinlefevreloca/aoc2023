@@ -51,7 +51,7 @@ impl Solution for Day4 {
         for (i, card) in cards.iter().enumerate() {
             let current_count = card_counts[i];
 
-            for j in (i+1..i+1+card.matches) {
+            for j in i+1..i+1+card.matches {
                 card_counts[j] += current_count;
             }
 
