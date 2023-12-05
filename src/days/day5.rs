@@ -206,7 +206,6 @@ impl Solution for Day5 {
                 let mut res = seed;
                 for map in &maps {
                     res = map.get_dest(res);
-                    // eprintln!("\nmap: {:?} provided result: {}", map, res);
                 }
                 results.push(res);
             }
