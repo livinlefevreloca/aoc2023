@@ -15,16 +15,20 @@ lazy_static! {
 #[derive(Debug)]
 struct Range {
     start: u64,
-    len: u64,
+    end: u64,
 }
 
 impl Range {
-    fn new(start: u64, len: u64) -> Self {
-        Self { start, len }
+    fn new(start: u64, end: u64) -> Self {
+        Self { start, end }
     }
 
     fn contains(&self, n: u64) -> bool {
-        n >= self.start && n < self.start + self.len
+        n >= self.start && n < self.end
+    }
+
+    fn has_overlap(&self, other: &Range) -> bool {
+        self.contains(other.start) || self.contains(other.end-1) || other.contains(self.start) || other.contains(self.end-1)
     }
 
     fn offset(&self, offset: u64) -> u64 {
@@ -36,7 +40,34 @@ impl Range {
     }
 
     fn rng(&self) -> StdRange<u64> {
-        self.start..self.start+self.len
+        self.start..self.end
+    }
+
+    fn below(&self, other: &Range) -> Option<Range> {
+        if other.start < self.start {
+            Some(Range::new(other.start, self.start))
+        } else {
+            None
+        }
+    }
+
+    fn overlap(&self, other: &Range) -> Option<Range> {
+        let start = self.start.max(other.start);
+        let end = self.end.min(other.end);
+
+        if start < end {
+            Some(Range::new(start, end))
+        } else {
+            None
+        }
+    }
+
+    fn above(&self, other: &Range) -> Option<Range> {
+        if other.end > self.end {
+            Some(Range::new(self.end, other.end))
+        } else {
+            None
+        }
     }
 
 
@@ -58,14 +89,23 @@ impl RangeMap {
         let len = capt.name("len").unwrap().as_str().parse::<u64>().unwrap();
 
 
-        let src = Range::new(src_start, len);
-        let dest = Range::new(dest_start, len);
+        let src = Range::new(src_start, src_start+len);
+        let dest = Range::new(dest_start, dest_start+len);
 
         Self {
             src,
             dest,
 
         }
+    }
+
+    fn apply(&self, r: &Range) -> (Option<Range>, Option<Range>, Option<Range>) {
+        let below = self.src.below(r);
+        let overlap = self.src.overlap(r);
+        let above = self.src.above(r);
+        let applied = overlap.map(|rng| Range::new(self.get_dest(rng.start), self.get_dest(rng.end)));
+
+        (below, applied, above)
     }
 
     fn dest_contains(&self, n: u64) -> bool {
@@ -78,6 +118,10 @@ impl RangeMap {
 
     fn get_dest(&self, n: u64) -> u64 {
         self.dest.offset(n - self.src.start())
+    }
+
+    fn has_overlap(&self, other: &Range) -> bool {
+        self.src.has_overlap(other)
     }
 
     fn get_src(&self, n: u64) -> u64 {
@@ -121,6 +165,34 @@ impl MapList {
 
     }
 
+    fn has_any_overlap(&self, range: &Range) -> bool {
+        self.ranges.iter().any(|r| r.has_overlap(range))
+    }
+
+    fn apply(&self, mut ranges: Vec<Range>) -> Vec<Range> {
+        let mut done = vec![];
+        while let Some(r) = ranges.pop() {
+            if !self.has_any_overlap(&r) {
+                done.push(r);
+                continue;
+            }
+            for rng in &self.ranges {
+                let (below, applied, above) = rng.apply(&r);
+                if let Some(appl) =  applied {
+                    done.push(appl);
+                    if let Some(bel) = below {
+                        ranges.push(bel);
+                    }
+
+                    if let Some(ab) = above {
+                        ranges.push(ab);
+                    }
+                }
+            }
+        }
+
+        done
+    }
 }
 
 pub struct Day5;
@@ -133,7 +205,7 @@ impl Day5 {
         .map(
             |capt| {
                 let start = capt.get(0).unwrap().as_str().parse::<u64>().unwrap();
-                Range::new(start, 1)
+                Range::new(start, start + 1)
             }
         ).collect()
     }
@@ -145,7 +217,7 @@ impl Day5 {
             |capt| {
                 let start = capt.name("start").unwrap().as_str().parse::<u64>().unwrap();
                 let len = capt.name("len").unwrap().as_str().parse::<u64>().unwrap();
-                Range::new(start, len)
+                Range::new(start, start + len)
             }
         ).collect()
     }
@@ -157,7 +229,6 @@ impl Day5 {
         let mut line = String::new();
         let mut seeds = Vec::new();
         let mut maps = Vec::new();
-
         loop {
             let n = reader.read_line(&mut line).unwrap();
             if n == 0 {
@@ -193,6 +264,43 @@ impl Day5 {
         Ok((seeds, maps))
     }
 
+    fn p2_brute(seeds: Vec<Range>, maps: Vec<MapList>) -> Option<u64> {
+
+        let mut min = None;
+        for i in 0.. {
+            let mut res = i;
+            for map in maps.iter().rev() {
+                res = map.get_src(res);
+            }
+
+            for seed in &seeds {
+                if seed.contains(res) {
+                    min = Some(i);
+                    break
+                }
+            }
+            if min.is_some() {
+                break;
+            }
+        }
+        min
+    }
+
+    fn p2_new(seeds: Vec<Range>, maps: Vec<MapList>) -> Option<u64> {
+       let mut mins = vec![];
+
+        for seed in seeds {
+            let mut ranges = vec![seed];
+            for map in &maps {
+                ranges = map.apply(ranges);
+            }
+            let min = ranges.iter().map(|r| r.start).min();
+            mins.push(min.unwrap());
+        }
+
+        mins.into_iter().min()
+    }
+
 }
 
 impl Solution for Day5 {
@@ -219,27 +327,7 @@ impl Solution for Day5 {
 
     fn problem2(path: &str) -> Result<()> {
         let (seeds, maps) = Day5::parse_file(path, Day5::parse_seeds_2)?;
-
-        let mut min = None;
-        for i in 0.. {
-            let mut res = i;
-            for map in maps.iter().rev() {
-                res = map.get_src(res);
-            }
-
-            for seed in &seeds {
-                if seed.contains(res) {
-                    min = Some(i);
-                    break
-                }
-            }
-
-            if min.is_some() {
-                break;
-            }
-
-        }
-
+        let min = Day5::p2_new(seeds, maps);
         println!("Got answer to Day 5 Problem 2: {}", min.unwrap());
         Ok(())
     }
