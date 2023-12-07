@@ -12,7 +12,7 @@ lazy_static! {
     static ref SEED_RANGE_RE: Regex = Regex::new(r"(?P<start>\d+) (?P<len>\d+)").unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 struct Range {
     start: u64,
     end: u64,
@@ -43,33 +43,25 @@ impl Range {
         self.start..self.end
     }
 
-    fn below(&self, other: &Range) -> Option<Range> {
-        if other.start < self.start {
-            Some(Range::new(other.start, self.start))
-        } else {
-            None
+    fn splice(&self, other: &Range) -> (Option<Range>, Option<Range>, Option<Range>) {
+        if other.start < self.start && other.end > self.end {
+            (Some(Range::new(other.start, self.start)), Some(self.clone()), Some(Range::new(self.end, other.start)))
+        } else if other.start < self.start && other.end < self.end && other.end > self.start {
+            (Some(Range::new(other.start, self.start)), Some(Range::new(self.start, other.end)), None)
+        }  else if other.start > self.start && other.end > self.end && other.end < self.start {
+            (None, Some(Range::new(other.start, self.end)), Some(Range::new(self.end, other.end)))
+        } else if other.start > self.start && other.end < self.end {
+            (None, Some(self.clone()), None)
+        }  else if other.start < self.start {
+            (Some(other.clone()), None, None)
+        } else if other.start > self.end {
+            (None, None, Some(other.clone()))
+        }
+        else {
+            eprintln!("{:?}, {:?}", &self, other);
+            panic!()
         }
     }
-
-    fn overlap(&self, other: &Range) -> Option<Range> {
-        let start = self.start.max(other.start);
-        let end = self.end.min(other.end);
-
-        if start < end {
-            Some(Range::new(start, end))
-        } else {
-            None
-        }
-    }
-
-    fn above(&self, other: &Range) -> Option<Range> {
-        if other.end > self.end {
-            Some(Range::new(self.end, other.end))
-        } else {
-            None
-        }
-    }
-
 
 }
 
@@ -100,11 +92,8 @@ impl RangeMap {
     }
 
     fn apply(&self, r: &Range) -> (Option<Range>, Option<Range>, Option<Range>) {
-        let below = self.src.below(r);
-        let overlap = self.src.overlap(r);
-        let above = self.src.above(r);
+        let (below, overlap, above) = self.src.splice(r);
         let applied = overlap.map(|rng| Range::new(self.get_dest(rng.start), self.get_dest(rng.end)));
-
         (below, applied, above)
     }
 
