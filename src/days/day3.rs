@@ -1,6 +1,6 @@
+use crate::days::solution::Solution;
 use lazy_static::lazy_static;
 use regex::Regex;
-use crate::days::solution::Solution;
 use std::io::Result;
 
 pub(crate) struct Day3;
@@ -97,12 +97,18 @@ impl Solution for Day3 {
 
     fn problem2(path: &str) -> Result<()> {
         let grid = Day3::read_input_into_grid(path)?;
-        let total = grid.iter().enumerate().map(|(i, line)| {
-            line.iter()
-                .enumerate()
-                .filter(|(_, c)| **c == '*')
-                .map(|(j, _)| Day3::extract_gear_ratio(i, j, &grid)).map(|o| o.unwrap_or(0)).sum::<u32>()
-        }).sum::<u32>();
+        let total = grid
+            .iter()
+            .enumerate()
+            .map(|(i, line)| {
+                line.iter()
+                    .enumerate()
+                    .filter(|(_, c)| **c == '*')
+                    .map(|(j, _)| Day3::extract_gear_ratio(i, j, &grid))
+                    .map(|o| o.unwrap_or(0))
+                    .sum::<u32>()
+            })
+            .sum::<u32>();
 
         println!("Got solution to Day3 Problem2: {}", total);
         Ok(())

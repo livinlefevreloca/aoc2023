@@ -1,21 +1,23 @@
-use std::{collections::HashMap, io::{BufReader, BufRead, Result}};
 use super::solution::Solution;
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::fs::File;
-use lazy_static::lazy_static;
-
+use std::{
+    collections::HashMap,
+    io::{BufRead, BufReader, Result},
+};
 
 lazy_static! {
-    static ref NODE_RE: Regex = Regex::new(r"(?P<val>[A-Z0-9]+) = \((?P<left>[A-Z0-9]+), (?P<right>[A-Z0-9]+)\)").unwrap();
+    static ref NODE_RE: Regex =
+        Regex::new(r"(?P<val>[A-Z0-9]+) = \((?P<left>[A-Z0-9]+), (?P<right>[A-Z0-9]+)\)").unwrap();
 }
 
 const TERM: &str = "ZZZ";
 
-
 #[derive(Clone, Debug)]
 enum Instruction {
     Left,
-    Right
+    Right,
 }
 
 #[derive(Clone, Debug)]
@@ -25,9 +27,7 @@ struct Node {
     right: String,
 }
 
-
 fn parse_nodes(reader: &mut BufReader<File>) -> HashMap<String, Node> {
-
     let mut nodes = HashMap::new();
 
     for line in reader.lines().skip(1) {
@@ -38,7 +38,9 @@ fn parse_nodes(reader: &mut BufReader<File>) -> HashMap<String, Node> {
         let right = node_match.name("right").unwrap().as_str().to_owned();
 
         let node = Node {
-            val: val.clone(), left, right
+            val: val.clone(),
+            left,
+            right,
         };
         nodes.insert(val, node);
     }
@@ -49,17 +51,18 @@ fn parse_nodes(reader: &mut BufReader<File>) -> HashMap<String, Node> {
 fn parse_instructions(reader: &mut BufReader<File>) -> Result<Vec<Instruction>> {
     let mut raw = String::new();
     reader.read_line(&mut raw)?;
-    Ok(raw.chars().filter(|c| !c.is_whitespace()).map(|c|{
-        match c {
+    Ok(raw
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| match c {
             'L' => Instruction::Left,
             'R' => Instruction::Right,
             _ => panic!(),
-        }
-    }).collect())
+        })
+        .collect())
 }
 
-
-fn gcd(mut i: u64, mut j: u64) -> u64{
+fn gcd(mut i: u64, mut j: u64) -> u64 {
     while j != 0 {
         let tmp = j;
         j = i % j;
@@ -76,17 +79,15 @@ fn lcms(n: Vec<u64>) -> u64 {
     n.into_iter().reduce(lcm).unwrap()
 }
 
-
 pub struct Day8;
 
 impl Solution for Day8 {
     fn problem1(path: &str) -> std::io::Result<()> {
-        let file =  File::open(path)?;
+        let file = File::open(path)?;
         let mut reader = BufReader::new(file);
         return Ok(());
         let instructions = parse_instructions(&mut reader)?;
         let nodes = parse_nodes(&mut reader);
-
 
         let mut current_node = nodes.get("AAA").unwrap();
         for (i, inst) in instructions.iter().cycle().enumerate() {
@@ -96,12 +97,8 @@ impl Solution for Day8 {
             }
 
             current_node = match inst {
-                Instruction::Left => {
-                    nodes.get(&current_node.left).unwrap()
-                },
-                Instruction::Right => {
-                    nodes.get(&current_node.right).unwrap()
-                }
+                Instruction::Left => nodes.get(&current_node.left).unwrap(),
+                Instruction::Right => nodes.get(&current_node.right).unwrap(),
             }
         }
 
@@ -109,13 +106,14 @@ impl Solution for Day8 {
     }
 
     fn problem2(path: &str) -> std::io::Result<()> {
-        let file =  File::open(path)?;
+        let file = File::open(path)?;
         let mut reader = BufReader::new(file);
 
         let instructions = parse_instructions(&mut reader)?;
         let nodes = parse_nodes(&mut reader);
 
-        let mut current_nodes: Vec<&Node> = nodes.values().filter(|n| n.val.ends_with('A')).collect();
+        let mut current_nodes: Vec<&Node> =
+            nodes.values().filter(|n| n.val.ends_with('A')).collect();
         println!("starting_nodes: {:?}", current_nodes);
 
         let mut multiples = vec![];
@@ -129,19 +127,14 @@ impl Solution for Day8 {
                 }
 
                 *current_node = match inst {
-                    Instruction::Left => {
-                        nodes.get(&current_node.left).unwrap()
-                    },
-                    Instruction::Right => {
-                        nodes.get(&current_node.right).unwrap()
-                    }
+                    Instruction::Left => nodes.get(&current_node.left).unwrap(),
+                    Instruction::Right => nodes.get(&current_node.right).unwrap(),
                 }
             }
         }
 
         println!("multiples: {:?}", multiples);
         println!("Got answer for problem2 day 8, {}", lcms(multiples));
-
 
         Ok(())
     }

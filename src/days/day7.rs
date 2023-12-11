@@ -1,15 +1,14 @@
 use super::solution::Solution;
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Result};
-use std::cmp::Ordering;
 
 lazy_static! {
     static ref LINE_RE: Regex = Regex::new(r"(?P<hand>[AKQJT2-9]+) (?P<bid>\d+)").unwrap();
 }
-
 
 fn get_value(c: char) -> u32 {
     match c {
@@ -57,9 +56,9 @@ struct Hand {
 }
 
 fn counts<I>(mut iter: I) -> HashMap<u32, usize>
-    where I: Iterator<Item = u32>
+where
+    I: Iterator<Item = u32>,
 {
-
     let mut counts = HashMap::new();
     while let Some(n) = iter.next() {
         if counts.contains_key(&n) {
@@ -73,11 +72,16 @@ fn counts<I>(mut iter: I) -> HashMap<u32, usize>
 }
 
 impl Hand {
-
     fn new(data: String, val_func: fn(char) -> u32) -> Self {
         let parsed = LINE_RE.captures(&data).unwrap();
 
-        let cards = parsed.name("hand").unwrap().as_str().chars().map(val_func).collect();
+        let cards = parsed
+            .name("hand")
+            .unwrap()
+            .as_str()
+            .chars()
+            .map(val_func)
+            .collect();
         let bid = parsed.name("bid").unwrap().as_str().parse::<u32>().unwrap();
 
         Self {
@@ -128,21 +132,23 @@ impl Hand {
 
             hands
         }
-
     }
 
     fn compute_score2(&self) -> u32 {
-        self.get_all_possible_hands().iter().map(|h| h.compute_score()).max().unwrap()
+        self.get_all_possible_hands()
+            .iter()
+            .map(|h| h.compute_score())
+            .max()
+            .unwrap()
     }
-
 
     fn compute_secondary_score(&self, other: &Hand) -> Ordering {
         for (i, card) in self.cards.iter().enumerate() {
             let other_card = other.cards[i];
-            if  *card > other_card  {
-                return Ordering::Greater
-            } else if other_card > *card  {
-                return Ordering::Less
+            if *card > other_card {
+                return Ordering::Greater;
+            } else if other_card > *card {
+                return Ordering::Less;
             }
         }
 
@@ -174,21 +180,14 @@ impl Hand {
             self.compute_secondary_score(other)
         }
     }
-
-
-
 }
-
-
 
 pub struct Day7;
 
 impl Day7 {
-
     fn parse(path: &str, val_func: fn(char) -> u32) -> Result<Vec<Hand>> {
-
         let f = File::open(path)?;
-        let mut reader =  BufReader::new(f);
+        let mut reader = BufReader::new(f);
         let mut data = String::new();
         let mut hands = vec![];
 
@@ -205,11 +204,14 @@ impl Day7 {
 }
 
 impl Solution for Day7 {
-
     fn problem1(path: &str) -> std::io::Result<()> {
         let mut hands = Day7::parse(path, get_value)?;
         hands.sort_by(|a, b| a.compare(b));
-        let total = hands.iter().enumerate().map(|(i, h)| (i as u32 + 1) * h.bid).sum::<u32>();
+        let total = hands
+            .iter()
+            .enumerate()
+            .map(|(i, h)| (i as u32 + 1) * h.bid)
+            .sum::<u32>();
 
         println!("Got answer to day 7 problem 1: {}", total);
 
@@ -218,9 +220,15 @@ impl Solution for Day7 {
 
     fn problem2(path: &str) -> std::io::Result<()> {
         let mut hands = Day7::parse(path, get_value2)?;
-        hands.iter_mut().for_each(|hand| hand.score = Some(hand.compute_score2()));
+        hands
+            .iter_mut()
+            .for_each(|hand| hand.score = Some(hand.compute_score2()));
         hands.sort_by(|a, b| a.compare2(b));
-        let total = hands.iter().enumerate().map(|(i, h)| (i as u32 + 1) * h.bid).sum::<u32>();
+        let total = hands
+            .iter()
+            .enumerate()
+            .map(|(i, h)| (i as u32 + 1) * h.bid)
+            .sum::<u32>();
 
         println!("Got answer to day 7 problem 2: {}", total);
 

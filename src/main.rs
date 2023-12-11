@@ -1,5 +1,8 @@
 #![feature(iter_map_windows)]
-use days::{day1::Day1, day2::Day2, day3::Day3, day4::Day4, day5::Day5, day6::Day6, day7::Day7, day8::Day8, day9::Day9, solution::Solution};
+use days::{
+    day1::Day1, day10::Day10, day11::Day11, day2::Day2, day3::Day3, day4::Day4, day5::Day5, day6::Day6,
+    day7::Day7, day8::Day8, day9::Day9, solution::Solution,
+};
 use std::env::args;
 
 mod days;
@@ -25,7 +28,7 @@ fn main() {
         Some("4") => {
             Day4::problem1(&file).unwrap();
             Day4::problem2(&file).unwrap();
-        },
+        }
         Some("5") => {
             Day5::problem1(&file).unwrap();
             Day5::problem2(&file).unwrap();
@@ -41,14 +44,19 @@ fn main() {
         Some("8") => {
             Day8::problem1(&file).unwrap();
             Day8::problem2(&file).unwrap();
-        },
+        }
         Some("9") => {
             Day9::problem1(&file).unwrap();
             Day9::problem2(&file).unwrap();
         }
+        Some("10") => {
+            Day10::problem1(&file).unwrap();
+            Day10::problem2(&file).unwrap();
+        }
+        Some("11") => {
+            Day11::problem1(&file).unwrap();
+            Day11::problem2(&file).unwrap();
+        }
         _ => eprint!("usage: cargo run -- <problem_number>"),
     }
 }
-
-
-
