@@ -1,8 +1,8 @@
 use super::solution::Solution;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::io::{BufReader, BufRead, Result};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Result};
 use std::ops::Range as StdRange;
 
 lazy_static! {
@@ -12,7 +12,7 @@ lazy_static! {
     static ref SEED_RANGE_RE: Regex = Regex::new(r"(?P<start>\d+) (?P<len>\d+)").unwrap();
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 struct Range {
     start: u64,
     end: u64,
@@ -28,10 +28,7 @@ impl Range {
     }
 
     fn has_overlap(&self, other: &Range) -> bool {
-        self.contains(other.start)
-            || self.contains(other.end - 1)
-            || other.contains(self.start)
-            || other.contains(self.end - 1)
+        self.contains(other.start) || self.contains(other.end-1) || other.contains(self.start) || other.contains(self.end-1)
     }
 
     fn offset(&self, offset: u64) -> u64 {
@@ -46,37 +43,36 @@ impl Range {
         self.start..self.end
     }
 
-    fn splice(&self, other: &Range) -> (Option<Range>, Option<Range>, Option<Range>) {
-        if other.start < self.start && other.end > self.end {
-            (
-                Some(Range::new(other.start, self.start)),
-                Some(self.clone()),
-                Some(Range::new(self.end, other.start)),
-            )
-        } else if other.start < self.start && other.end < self.end && other.end > self.start {
-            (
-                Some(Range::new(other.start, self.start)),
-                Some(Range::new(self.start, other.end)),
-                None,
-            )
-        } else if other.start > self.start && other.end > self.end && other.end < self.start {
-            (
-                None,
-                Some(Range::new(other.start, self.end)),
-                Some(Range::new(self.end, other.end)),
-            )
-        } else if other.start > self.start && other.end < self.end {
-            (None, Some(self.clone()), None)
-        } else if other.start < self.start {
-            (Some(other.clone()), None, None)
-        } else if other.start > self.end {
-            (None, None, Some(other.clone()))
+    fn below(&self, other: &Range) -> Option<Range> {
+        if other.start < self.start {
+            Some(Range::new(other.start, self.start))
         } else {
-            eprintln!("{:?}, {:?}", &self, other);
-            panic!()
+            None
         }
     }
+
+    fn overlap(&self, other: &Range) -> Option<Range> {
+        let start = self.start.max(other.start);
+        let end = self.end.min(other.end);
+
+        if start < end {
+            Some(Range::new(start, end))
+        } else {
+            None
+        }
+    }
+
+    fn above(&self, other: &Range) -> Option<Range> {
+        if other.end > self.end {
+            Some(Range::new(self.end, other.end))
+        } else {
+            None
+        }
+    }
+
+
 }
+
 
 #[derive(Debug)]
 struct RangeMap {
@@ -85,22 +81,30 @@ struct RangeMap {
 }
 
 impl RangeMap {
+
     fn from_line(line: &str) -> Self {
         let capt = LINE_RE.captures(line).unwrap();
         let src_start = capt.name("src").unwrap().as_str().parse::<u64>().unwrap();
         let dest_start = capt.name("dest").unwrap().as_str().parse::<u64>().unwrap();
         let len = capt.name("len").unwrap().as_str().parse::<u64>().unwrap();
 
-        let src = Range::new(src_start, src_start + len);
-        let dest = Range::new(dest_start, dest_start + len);
 
-        Self { src, dest }
+        let src = Range::new(src_start, src_start+len);
+        let dest = Range::new(dest_start, dest_start+len);
+
+        Self {
+            src,
+            dest,
+
+        }
     }
 
     fn apply(&self, r: &Range) -> (Option<Range>, Option<Range>, Option<Range>) {
-        let (below, overlap, above) = self.src.splice(r);
-        let applied =
-            overlap.map(|rng| Range::new(self.get_dest(rng.start), self.get_dest(rng.end)));
+        let below = self.src.below(r);
+        let overlap = self.src.overlap(r);
+        let above = self.src.above(r);
+        let applied = overlap.map(|rng| Range::new(self.get_dest(rng.start), self.get_dest(rng.end)));
+
         (below, applied, above)
     }
 
@@ -131,18 +135,21 @@ struct MapList {
 }
 
 impl MapList {
+
     fn new(lines: Vec<String>) -> Self {
         let ranges = lines.iter().map(|l| RangeMap::from_line(l)).collect();
 
-        Self { ranges }
+        Self {
+            ranges,
+        }
     }
 
     fn get_dest(&self, n: u64) -> u64 {
         for range in &self.ranges {
             if range.source_contains(n) {
-                return range.get_dest(n);
+                return range.get_dest(n)
             }
-        }
+        };
 
         n
     }
@@ -150,11 +157,12 @@ impl MapList {
     fn get_src(&self, n: u64) -> u64 {
         for range in &self.ranges {
             if range.dest_contains(n) {
-                return range.get_src(n);
+                return range.get_src(n)
             }
-        }
+        };
 
         n
+
     }
 
     fn has_any_overlap(&self, range: &Range) -> bool {
@@ -170,7 +178,7 @@ impl MapList {
             }
             for rng in &self.ranges {
                 let (below, applied, above) = rng.apply(&r);
-                if let Some(appl) = applied {
+                if let Some(appl) =  applied {
                     done.push(appl);
                     if let Some(bel) = below {
                         ranges.push(bel);
@@ -190,31 +198,31 @@ impl MapList {
 pub struct Day5;
 
 impl Day5 {
+
     fn parse_seeds_1(line: &str) -> Vec<Range> {
         SEED_RE
-            .captures_iter(line)
-            .map(|capt| {
+        .captures_iter(line)
+        .map(
+            |capt| {
                 let start = capt.get(0).unwrap().as_str().parse::<u64>().unwrap();
                 Range::new(start, start + 1)
-            })
-            .collect()
+            }
+        ).collect()
     }
 
     fn parse_seeds_2(line: &str) -> Vec<Range> {
         SEED_RANGE_RE
-            .captures_iter(line)
-            .map(|capt| {
+        .captures_iter(line)
+        .map(
+            |capt| {
                 let start = capt.name("start").unwrap().as_str().parse::<u64>().unwrap();
                 let len = capt.name("len").unwrap().as_str().parse::<u64>().unwrap();
                 Range::new(start, start + len)
-            })
-            .collect()
+            }
+        ).collect()
     }
 
-    fn parse_file(
-        path: &str,
-        parse_seeds_f: fn(&str) -> Vec<Range>,
-    ) -> Result<(Vec<Range>, Vec<MapList>)> {
+    fn parse_file(path: &str, parse_seeds_f: fn(&str) -> Vec<Range>) -> Result<(Vec<Range>, Vec<MapList>)> {
         let f = File::open(path)?;
         let mut reader = BufReader::new(f);
 
@@ -228,8 +236,10 @@ impl Day5 {
             }
             match &line.trim() {
                 l if l.starts_with("seeds:") => {
-                    seeds.extend(parse_seeds_f(l));
-                }
+                    seeds.extend(
+                        parse_seeds_f(l)
+                    );
+                },
                 l if HEADER_RE.is_match(l) => {
                     let mut map_lines = Vec::new();
                     let mut map_line = String::new();
@@ -243,17 +253,19 @@ impl Day5 {
 
                     let map = MapList::new(map_lines);
                     maps.push(map);
-                }
+                },
                 l if l.trim().is_empty() => continue,
                 _ => panic!(),
             }
             line.clear();
+
         }
 
         Ok((seeds, maps))
     }
 
     fn p2_brute(seeds: Vec<Range>, maps: Vec<MapList>) -> Option<u64> {
+
         let mut min = None;
         for i in 0.. {
             let mut res = i;
@@ -264,7 +276,7 @@ impl Day5 {
             for seed in &seeds {
                 if seed.contains(res) {
                     min = Some(i);
-                    break;
+                    break
                 }
             }
             if min.is_some() {
@@ -275,7 +287,7 @@ impl Day5 {
     }
 
     fn p2_new(seeds: Vec<Range>, maps: Vec<MapList>) -> Option<u64> {
-        let mut mins = vec![];
+       let mut mins = vec![];
 
         for seed in seeds {
             let mut ranges = vec![seed];
@@ -288,9 +300,11 @@ impl Day5 {
 
         mins.into_iter().min()
     }
+
 }
 
 impl Solution for Day5 {
+
     fn problem1(path: &str) -> Result<()> {
         let (seeds, maps) = Day5::parse_file(path, Day5::parse_seeds_1)?;
         let mut results = vec![];
@@ -305,10 +319,8 @@ impl Solution for Day5 {
             }
         }
 
-        println!(
-            "Got answer for Day 5 Problem 1: {}",
-            results.iter().min().unwrap()
-        );
+        println!("Got answer for Day 5 Problem 1: {}", results.iter().min().unwrap());
+
 
         Ok(())
     }

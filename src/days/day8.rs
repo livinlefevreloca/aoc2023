@@ -85,7 +85,7 @@ impl Solution for Day8 {
     fn problem1(path: &str) -> std::io::Result<()> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
-        return Ok(());
+        // return Ok(());
         let instructions = parse_instructions(&mut reader)?;
         let nodes = parse_nodes(&mut reader);
 
@@ -114,12 +114,10 @@ impl Solution for Day8 {
 
         let mut current_nodes: Vec<&Node> =
             nodes.values().filter(|n| n.val.ends_with('A')).collect();
-        println!("starting_nodes: {:?}", current_nodes);
 
         let mut multiples = vec![];
 
         for current_node in current_nodes.iter_mut() {
-            println!("working on node: {:?}", current_node);
             for (i, inst) in instructions.iter().cycle().enumerate() {
                 if current_node.val.ends_with('Z') {
                     multiples.push(i as u64);
@@ -132,8 +130,6 @@ impl Solution for Day8 {
                 }
             }
         }
-
-        println!("multiples: {:?}", multiples);
         println!("Got answer for problem2 day 8, {}", lcms(multiples));
 
         Ok(())

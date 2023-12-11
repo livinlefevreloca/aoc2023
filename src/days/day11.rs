@@ -19,7 +19,7 @@ impl Day11 {
         Ok(layers)
     }
 
-    fn find_galaxies(space: &Vec<Vec<char>>, expansion: usize) -> Vec<(i32, i32)> {
+    fn find_galaxies(space: &[Vec<char>], expansion: usize) -> Vec<(i32, i32)> {
         let (empty_rows, empty_cols) = Day11::find_empty_space(space);
 
         let mut galaxies = vec![];
@@ -35,7 +35,7 @@ impl Day11 {
         galaxies
     }
 
-    fn find_empty_space(space: &Vec<Vec<char>>) -> (Vec<usize>, Vec<usize>) {
+    fn find_empty_space(space: &[Vec<char>]) -> (Vec<usize>, Vec<usize>) {
         let mut rows = vec![];
         let mut columns = vec![];
 
@@ -64,10 +64,6 @@ impl Solution for Day11 {
         let space = Day11::parse(path)?;
         let galaxies = Day11::find_galaxies(&space, 1);
 
-        for line in space.iter() {
-            eprintln!("{}", line.iter().collect::<String>());
-        }
-
         let mut pairs = HashSet::new();
         for (i, g0) in galaxies.iter().enumerate() {
             for (j, g1) in galaxies.iter().enumerate() {
@@ -81,22 +77,16 @@ impl Solution for Day11 {
         for (g0, g1) in pairs.iter() {
             let diff = g1.0.abs_diff(g0.0) + g1.1.abs_diff(g0.1);
             total += diff;
-            println!("{:?} -> {:?} distance is: {}", g0, g1, diff);
         }
 
-        println!("Found solution to Day11 Problem1: {}", total);
+        println!("Got result for Problem 1 day 11: {}", total);
 
         Ok(())
     }
 
     fn problem2(path: &str) -> std::io::Result<()> {
         let space = Day11::parse(path)?;
-
-        println!("created space");
-
         let galaxies = Day11::find_galaxies(&space, 999999);
-
-        println!("Found galaxies");
 
         let mut pairs = HashSet::new();
         for (i, g0) in galaxies.iter().enumerate() {
@@ -107,17 +97,12 @@ impl Solution for Day11 {
             }
         }
 
-        println!("Got pairs");
-
-
         let mut total: u64 = 0;
         for (g0, g1) in pairs.iter() {
             let diff = g1.0.abs_diff(g0.0) + g1.1.abs_diff(g0.1);
             total += diff as u64;
-            // println!("{:?} -> {:?} distance is: {}", g0, g1, diff);
         }
-
-        println!("Found solution to Day11 Problem1: {}", total);
+        println!("Got result for Problem 2 day 11: {}", total);
 
         Ok(())
     }
