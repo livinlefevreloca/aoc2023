@@ -68,8 +68,6 @@ impl Solution for Day4 {
             for j in i + 1..i + 1 + card.matches {
                 card_counts[j] += current_count;
             }
-
-            eprintln!("card.matches: {}, counts: {:?}", card.matches, card_counts);
         }
 
         let total: u32 = card_counts.iter().sum::<u32>();
