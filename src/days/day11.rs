@@ -1,6 +1,6 @@
 use super::solution::Solution;
+use std::collections::HashSet;
 use std::fs::File;
-use std:: collections::HashSet;
 use std::io::{prelude::*, BufReader, Result};
 
 pub struct Day11;
@@ -52,12 +52,9 @@ impl Day11 {
             }
         }
 
-
         (rows, columns)
     }
 }
-
-
 
 impl Solution for Day11 {
     fn problem1(path: &str) -> std::io::Result<()> {
